@@ -490,20 +490,20 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		// Lock Metric
 		ch <- prometheus.MustNewConstMetric(
 			channelLockMetric, prometheus.GaugeValue, channel.LockStatus,
-			channel.ChannelID, DOWNSTREAM,
+			channel.ChannelID, UPSTREAM,
 		)
 
 		// Power Metric
 		ch <- prometheus.MustNewConstMetric(
 			channelPowerMetric, prometheus.GaugeValue, channel.Power,
-			channel.ChannelID, DOWNSTREAM,
+			channel.ChannelID, UPSTREAM,
 		)
 
 		// Meta Metric
 		ch <- prometheus.MustNewConstMetric(
 			channelMetaMetric, prometheus.GaugeValue, 1,
 			channel.ChannelID, channel.USChannelType, channel.Frequency,
-			channel.Width, DOWNSTREAM,
+			channel.Width, UPSTREAM,
 		)
 	}
 }
