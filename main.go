@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -50,5 +51,5 @@ func main() {
 		</body>
 		</html>`))
 	})
-	log.Fatal(http.ListenAndServe(*listenAddress, nil))
+	log.Fatal(http.ListenAndServe(*listenAddress, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux)))
 }

@@ -78,16 +78,22 @@ func NewExporter(host string, user string, pass string) *Exporter {
 
 // Log into the web interface and return sessionID and csrf token
 func (e *Exporter) Login() (sessionID *http.Cookie, csrfToken string, err error) {
-	url := fmt.Sprintf("https://%s/cmconnectionstatus.html?login_%s", e.Host, e.AuthToken)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return
-	}
-
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://%s/logout.html", e.Host), nil)
+	if err != nil {
+		return
+	}
+	client.Do(req)
+
+	url := fmt.Sprintf("https://%s/cmconnectionstatus.html?login_%s", e.Host, e.AuthToken)
+	req, err = http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return
@@ -106,7 +112,7 @@ func (e *Exporter) Login() (sessionID *http.Cookie, csrfToken string, err error)
 		for _, cookie := range resp.Cookies() {
 			// The server will set the sessionID to "" whenever it wants to
 			//   force and signal the end of a session.
-			if cookie.Name == "sessionID" && cookie.Value != "" {
+			if cookie.Name == "sessionId" && cookie.Value != "" {
 				sessionID = cookie
 				return
 			}
@@ -188,7 +194,7 @@ func ScrapeDownstreamTable(element *goquery.Selection) (downstreamChannels []Dow
 	element.Each(func(index int, element *goquery.Selection) {
 		parsedRow, err := ScrapeDownstreamTableRow(element)
 		if err != nil {
-			log.Error(err)
+			log.Debug(err)
 			return
 		}
 		downstreamChannels = append(downstreamChannels, parsedRow)
@@ -198,8 +204,8 @@ func ScrapeDownstreamTable(element *goquery.Selection) (downstreamChannels []Dow
 
 func ScrapeUpstreamTableRow(element *goquery.Selection) (upstreamChannel UpstreamChannel, err error) {
 	// Skip first row (that shows header values)
-	if ScrapeColStr(element, 1) == "Channel" {
-		err = errors.New("skip second header row")
+	if firstVal := ScrapeColStr(element, 1); firstVal == "Channel" || firstVal == "" {
+		err = errors.New("skip first two header row")
 		return
 	}
 
@@ -229,7 +235,7 @@ func ScrapeUpstreamTable(element *goquery.Selection) (upstreamChannels []Upstrea
 	element.Each(func(index int, element *goquery.Selection) {
 		parsedRow, err := ScrapeUpstreamTableRow(element)
 		if err != nil {
-			log.Error(err)
+			log.Debug(err)
 			return
 		}
 		upstreamChannels = append(upstreamChannels, parsedRow)
@@ -278,11 +284,16 @@ func (e *Exporter) Scrape() (modem ArrisModem, err error) {
 		connectivityState = 1.
 	}
 
-	downstreamSelector := ".content > center:nth-child(2) > table:nth-child(2) > tbody:nth-child(1) > tr"
-	downstreamChannels := ScrapeDownstreamTable(document.Find(downstreamSelector))
-
-	upstreamSelector := ".content > center:nth-child(2) > table:nth-child(3) > tbody:nth-child(1) > tr"
-	upstreamChannels := ScrapeUpstreamTable(document.Find(upstreamSelector))
+	var downstreamChannels []DownstreamChannel
+	var upstreamChannels []UpstreamChannel
+	document.Find("table").Each(func(i int, element *goquery.Selection) {
+		switch i {
+		case 1:
+			downstreamChannels = ScrapeDownstreamTable(element.Find("tr"))
+		case 2:
+			upstreamChannels = ScrapeUpstreamTable(element.Find("tr"))
+		}
+	})
 
 	url = fmt.Sprintf("https://%s/cmswinfo.html?ct_%s", e.Host, csrfToken)
 	document, err = GetURL(url, sessionID)
