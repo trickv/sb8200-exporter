@@ -5,6 +5,7 @@
 *.dll
 *.so
 *.dylib
+/sb8200-exporter
 
 # Test binary, built with `go test -c`
 *.test
