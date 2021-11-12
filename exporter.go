@@ -379,7 +379,7 @@ var (
 		nil, nil,
 	)
 	metaMetric = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "meta"),
+		prometheus.BuildFQName(namespace, "", "info"),
 		"Metadata about this modem.",
 		[]string{"host", "hwversion", "swversion", "mac", "serial"},
 		nil,
@@ -410,7 +410,7 @@ var (
 		[]string{"channel_id", "type"}, nil,
 	)
 	channelMetaMetric = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "channel", "meta"),
+		prometheus.BuildFQName(namespace, "channel", "info"),
 		"Channel metadata",
 		[]string{"channel_id", "modulation", "frequency", "width", "type"}, nil,
 	)
