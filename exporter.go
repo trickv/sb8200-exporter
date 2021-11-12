@@ -86,6 +86,7 @@ func (e *Exporter) Login() (sessionID *http.Cookie, csrfToken string, err error)
 	if err != nil {
 		return
 	}
+	defer req.Body.Close()
 	client.Do(req)
 
 	url := fmt.Sprintf("https://%s/cmconnectionstatus.html?login_%s", e.Host, e.AuthToken)
@@ -249,6 +250,7 @@ func GetURL(url string, sessionID *http.Cookie) (document *goquery.Document, err
 		return
 	}
 	req.AddCookie(sessionID)
+	defer req.Body.Close()
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -258,6 +260,7 @@ func GetURL(url string, sessionID *http.Cookie) (document *goquery.Document, err
 	if err != nil {
 		return
 	}
+	defer resp.Body.Close()
 
 	document, err = goquery.NewDocumentFromReader(resp.Body)
 	return
