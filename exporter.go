@@ -1,18 +1,17 @@
-// sb8200-exporter, a Prometheus exporter for Arris SB8200 Modems
-// Copyright (C) 2021  Mark Stenglein
+// arris_cm_exporter, a Prometheus exporter for Arris Cable Modems
+// Copyright 2021 Mark Stenglein
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package main
 
 import (
@@ -86,8 +85,11 @@ func (e *Exporter) Login() (sessionID *http.Cookie, csrfToken string, err error)
 	if err != nil {
 		return
 	}
-	defer req.Body.Close()
-	client.Do(req)
+	logoutResp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer logoutResp.Body.Close()
 
 	url := fmt.Sprintf("https://%s/cmconnectionstatus.html?login_%s", e.Host, e.AuthToken)
 	req, err = http.NewRequest(http.MethodGet, url, nil)
@@ -99,7 +101,6 @@ func (e *Exporter) Login() (sessionID *http.Cookie, csrfToken string, err error)
 	if err != nil {
 		return
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
@@ -250,7 +251,6 @@ func GetURL(url string, sessionID *http.Cookie) (document *goquery.Document, err
 		return
 	}
 	req.AddCookie(sessionID)
-	defer req.Body.Close()
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -366,19 +366,19 @@ var (
 	upMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
 		"Was the last data scrape successful?",
-		nil, nil,
+		[]string{"host"}, nil,
 	)
 	connectedMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "connected"),
 		"Is the modem's connection up (connectivity state)?",
-		nil, nil,
+		[]string{"host"}, nil,
 	)
 	uptimeMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "uptime_seconds"),
 		"Uptime",
-		nil, nil,
+		[]string{"host"}, nil,
 	)
-	metaMetric = prometheus.NewDesc(
+	infoMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "info"),
 		"Metadata about this modem.",
 		[]string{"host", "hwversion", "swversion", "mac", "serial"},
@@ -387,32 +387,32 @@ var (
 	channelLockMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "channel", "lock"),
 		"Is the downstream channel locked?",
-		[]string{"channel_id", "type"}, nil,
+		[]string{"host", "channel_id", "type"}, nil,
 	)
 	channelPowerMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "channel", "power"),
 		"Power level (dBmV)",
-		[]string{"channel_id", "type"}, nil,
+		[]string{"host", "channel_id", "type"}, nil,
 	)
 	channelSNRMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "channel", "snr"),
 		"SNR/MER rate (dB)",
-		[]string{"channel_id", "type"}, nil,
+		[]string{"host", "channel_id", "type"}, nil,
 	)
 	channelCorrectedMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "channel", "corrected_total"),
 		"Corrected errors, counter resets to 0 on modem reboot",
-		[]string{"channel_id", "type"}, nil,
+		[]string{"host", "channel_id", "type"}, nil,
 	)
 	channelUncorrectableMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "channel", "uncorrectable_total"),
 		"Uncorrectable errors, counter resets to 0 on modem reboot",
-		[]string{"channel_id", "type"}, nil,
+		[]string{"host", "channel_id", "type"}, nil,
 	)
-	channelMetaMetric = prometheus.NewDesc(
+	channelInfoMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "channel", "info"),
 		"Channel metadata",
-		[]string{"channel_id", "modulation", "frequency", "width", "type"}, nil,
+		[]string{"host", "channel_id", "modulation", "frequency", "width", "type"}, nil,
 	)
 )
 
@@ -420,13 +420,13 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- upMetric
 	ch <- connectedMetric
 	ch <- uptimeMetric
-	ch <- metaMetric
+	ch <- infoMetric
 	ch <- channelLockMetric
 	ch <- channelPowerMetric
 	ch <- channelSNRMetric
 	ch <- channelCorrectedMetric
 	ch <- channelUncorrectableMetric
-	ch <- channelMetaMetric
+	ch <- channelInfoMetric
 }
 
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
@@ -454,7 +454,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 	// Modem Meta Metric
 	ch <- prometheus.MustNewConstMetric(
-		metaMetric, prometheus.GaugeValue, 1,
+		infoMetric, prometheus.GaugeValue, 1,
 		e.Host, modem.HardwareVersion, modem.SoftwareVersion,
 		modem.MACAddress, modem.SerialNumber,
 	)
@@ -493,7 +493,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 		// Meta Metric
 		ch <- prometheus.MustNewConstMetric(
-			channelMetaMetric, prometheus.GaugeValue, 1,
+			channelInfoMetric, prometheus.GaugeValue, 1,
 			channel.ChannelID, channel.Modulation, channel.Frequency,
 			"", DOWNSTREAM,
 		)
@@ -515,7 +515,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 		// Meta Metric
 		ch <- prometheus.MustNewConstMetric(
-			channelMetaMetric, prometheus.GaugeValue, 1,
+			channelInfoMetric, prometheus.GaugeValue, 1,
 			channel.ChannelID, channel.USChannelType, channel.Frequency,
 			channel.Width, UPSTREAM,
 		)

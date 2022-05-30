@@ -1,4 +1,4 @@
-module git.markstenglein.com/sb8200-exporter
+module github.com/ocelotsloth/sb8200-exporter
 
 go 1.17
 

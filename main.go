@@ -1,18 +1,17 @@
-// sb8200-exporter, a Prometheus exporter for Arris SB8200 Modems
-// Copyright (C) 2021  Mark Stenglein
+// arris_cm_exporter, a Prometheus exporter for Arris Cable Modems
+// Copyright 2021 Mark Stenglein
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package main
 
 import (
@@ -34,9 +33,9 @@ var (
 )
 
 func main() {
-	host := os.Getenv("SB8200_HOST")
-	user := os.Getenv("SB8200_USER")
-	password := os.Getenv("SB8200_PASSWORD")
+	host := os.Getenv("ARRIS_CM_HOST")
+	user := "admin"
+	password := os.Getenv("ARRIS_CM_PASSWORD")
 
 	exporter := NewExporter(host, user, password)
 	prometheus.MustRegister(exporter)
@@ -44,7 +43,7 @@ func main() {
 	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
-		<head><title>SB8200 Exporter</title></head>
+		<head><title>Arris Cable Modem Exporter</title></head>
 		<body>
 		<h1>SB8200 Exporter</h1>
 		<p><a href='` + *metricsPath + `'>Metrics</a></p>
