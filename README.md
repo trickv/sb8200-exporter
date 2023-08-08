@@ -1,10 +1,12 @@
 # Arris Cable Modem Exporter
 
 This is a Prometheus exporter for Arris cable modems. I only own an SB8200 but
-it may work with others. If you own a different model please reach out and I'd
-love to get it working there.
+it may work with others. ~If you own a different model please reach out and I'd
+love to get it working there.~
 
-If anybody wants to send me a different model to test I'd also be thankful.
+~If anybody wants to send me a different model to test I'd also be thankful.~
+
+I no longer have Comcast so no longer use this code and have no way to test it if I wanted. do still reach out if you want to get this working and have trouble.
 
 ## Supported Devices
 
