@@ -56,3 +56,12 @@ scrape_configs:
 The `example_dashboard.json` file has a useful starting point for a grafana
 dashboard. You'll need to adjust this to your specific device(s).
 
+### Docker
+
+```
+docker run -d -p 9143:9143 \
+  -e SB8200_HOST=192.168.100.1 \
+  -e SB8200_USER=admin \
+  -e SB8200_PASS=password \
+  sb8200-exporter
+```
